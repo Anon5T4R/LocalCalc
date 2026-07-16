@@ -1,0 +1,53 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#4c1d95"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- fundo -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <rect x="64" y="64" width="896" height="512" rx="200" fill="url(#sheen)"/>
+
+  <!-- corpo da calculadora -->
+  <rect x="252" y="200" width="520" height="640" rx="52" fill="#ffffff" opacity="0.96"/>
+  <!-- visor -->
+  <rect x="300" y="248" width="424" height="130" rx="22" fill="#2e1065"/>
+  <rect x="470" y="286" width="220" height="24" rx="12" fill="#a78bfa"/>
+  <rect x="580" y="326" width="110" height="30" rx="14" fill="#e9d5ff"/>
+
+  <!-- teclas -->
+  <g fill="#ede9fe">
+    <rect x="300" y="416" width="120" height="88" rx="20"/>
+    <rect x="452" y="416" width="120" height="88" rx="20"/>
+    <rect x="604" y="416" width="120" height="88" rx="20"/>
+    <rect x="300" y="528" width="120" height="88" rx="20"/>
+    <rect x="452" y="528" width="120" height="88" rx="20"/>
+    <rect x="604" y="528" width="120" height="88" rx="20"/>
+    <rect x="300" y="640" width="120" height="88" rx="20"/>
+    <rect x="452" y="640" width="120" height="88" rx="20"/>
+  </g>
+  <!-- tecla = destacada -->
+  <rect x="604" y="640" width="120" height="88" rx="20" fill="#7c3aed"/>
+  <g stroke="#ffffff" stroke-width="14" stroke-linecap="round">
+    <path d="M 636 668 H 692"/>
+    <path d="M 636 700 H 692"/>
+  </g>
+
+  <!-- sinais nas teclas -->
+  <g stroke="#6d28d9" stroke-width="14" stroke-linecap="round">
+    <path d="M 336 460 H 384"/>
+    <path d="M 360 436 V 484"/>
+    <path d="M 488 460 H 536"/>
+    <path d="M 646 444 L 682 480 M 682 444 L 646 480"/>
+  </g>
+
+  <!-- easter egg da marca -->
+  <text x="512" y="920" font-family="Segoe Script, cursive" font-size="80"
+        fill="#ffffff" opacity="0.55" text-anchor="middle">Taylor</text>
+</svg>

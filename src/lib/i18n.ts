@@ -1,0 +1,240 @@
+import { useSyncExternalStore } from "react";
+
+/**
+ * i18n leve da UI (padrão da suíte). Símbolos de unidade (mm, kg, °C…) são
+ * universais e NÃO se traduzem; só categorias e unidades "de palavra"
+ * (dia/semana/ano) têm chave.
+ */
+
+export type Locale = "pt" | "en" | "es";
+
+export const LOCALE_LABELS: Record<Locale, string> = {
+  pt: "Português",
+  en: "English",
+  es: "Español",
+};
+
+const LOCALE_KEY = "localcalc.locale";
+
+const pt = {
+  // Modos
+  "mode.standard": "Padrão",
+  "mode.scientific": "Científica",
+  "mode.programmer": "Programador",
+  "mode.converter": "Conversor",
+
+  // Topo
+  "top.history": "Histórico",
+  "top.settingsTitle": "Configurações",
+
+  // Display / ações
+  "display.placeholder": "Digite a expressão…",
+  "display.error": "Erro: {msg}",
+  "btn.clear": "C",
+  "btn.equals": "=",
+  "copy.result": "Copiar resultado",
+  "toast.copied": "Resultado copiado",
+  "toast.copyFailed": "Não consegui copiar",
+
+  // Memória
+  "mem.hint": "Memória: {v}",
+
+  // Programador
+  "prog.hint": "Operadores: AND OR XOR NOT << >>  ·  Literais: 0x 0o 0b",
+
+  // Conversor
+  "conv.value": "Valor",
+  "conv.swap": "Inverter unidades",
+  "cat.length": "Comprimento",
+  "cat.mass": "Massa",
+  "cat.temp": "Temperatura",
+  "cat.data": "Dados",
+  "cat.time": "Tempo",
+  "cat.area": "Área",
+  "cat.volume": "Volume",
+  "cat.speed": "Velocidade",
+  "unit.day": "dia",
+  "unit.week": "semana",
+  "unit.year": "ano",
+  "unit.cup": "xícara (US)",
+  "unit.gal": "galão (US)",
+  "unit.knot": "nó",
+
+  // Histórico
+  "hist.title": "Histórico",
+  "hist.empty": "Nada calculado ainda.",
+  "hist.clear": "limpar tudo",
+  "hist.reuse": "Reusar esta conta",
+
+  // Settings
+  "settings.title": "Configurações",
+  "settings.theme": "Tema",
+  "settings.themeSystem": "Sistema",
+  "settings.themeLight": "Claro",
+  "settings.themeDark": "Escuro",
+  "settings.language": "Idioma",
+  "settings.about":
+    " — calculadora 100% offline: padrão, científica (DEG/RAD, memória), programador (HEX/DEC/OCT/BIN, bitwise, precisão arbitrária) e conversor de unidades. Motor de expressão próprio, testado. Parte da suíte Local.",
+  "dlg.ok": "OK",
+} as const;
+
+export type MessageKey = keyof typeof pt;
+
+const en: Record<MessageKey, string> = {
+  "mode.standard": "Standard",
+  "mode.scientific": "Scientific",
+  "mode.programmer": "Programmer",
+  "mode.converter": "Converter",
+
+  "top.history": "History",
+  "top.settingsTitle": "Settings",
+
+  "display.placeholder": "Type an expression…",
+  "display.error": "Error: {msg}",
+  "btn.clear": "C",
+  "btn.equals": "=",
+  "copy.result": "Copy result",
+  "toast.copied": "Result copied",
+  "toast.copyFailed": "Couldn't copy",
+
+  "mem.hint": "Memory: {v}",
+
+  "prog.hint": "Operators: AND OR XOR NOT << >>  ·  Literals: 0x 0o 0b",
+
+  "conv.value": "Value",
+  "conv.swap": "Swap units",
+  "cat.length": "Length",
+  "cat.mass": "Mass",
+  "cat.temp": "Temperature",
+  "cat.data": "Data",
+  "cat.time": "Time",
+  "cat.area": "Area",
+  "cat.volume": "Volume",
+  "cat.speed": "Speed",
+  "unit.day": "day",
+  "unit.week": "week",
+  "unit.year": "year",
+  "unit.cup": "cup (US)",
+  "unit.gal": "gallon (US)",
+  "unit.knot": "knot",
+
+  "hist.title": "History",
+  "hist.empty": "Nothing calculated yet.",
+  "hist.clear": "clear all",
+  "hist.reuse": "Reuse this calculation",
+
+  "settings.title": "Settings",
+  "settings.theme": "Theme",
+  "settings.themeSystem": "System",
+  "settings.themeLight": "Light",
+  "settings.themeDark": "Dark",
+  "settings.language": "Language",
+  "settings.about":
+    " — 100% offline calculator: standard, scientific (DEG/RAD, memory), programmer (HEX/DEC/OCT/BIN, bitwise, arbitrary precision) and unit converter. In-house tested expression engine. Part of the Local suite.",
+  "dlg.ok": "OK",
+};
+
+const es: Record<MessageKey, string> = {
+  "mode.standard": "Estándar",
+  "mode.scientific": "Científica",
+  "mode.programmer": "Programador",
+  "mode.converter": "Conversor",
+
+  "top.history": "Historial",
+  "top.settingsTitle": "Configuración",
+
+  "display.placeholder": "Escribe una expresión…",
+  "display.error": "Error: {msg}",
+  "btn.clear": "C",
+  "btn.equals": "=",
+  "copy.result": "Copiar resultado",
+  "toast.copied": "Resultado copiado",
+  "toast.copyFailed": "No se pudo copiar",
+
+  "mem.hint": "Memoria: {v}",
+
+  "prog.hint": "Operadores: AND OR XOR NOT << >>  ·  Literales: 0x 0o 0b",
+
+  "conv.value": "Valor",
+  "conv.swap": "Invertir unidades",
+  "cat.length": "Longitud",
+  "cat.mass": "Masa",
+  "cat.temp": "Temperatura",
+  "cat.data": "Datos",
+  "cat.time": "Tiempo",
+  "cat.area": "Área",
+  "cat.volume": "Volumen",
+  "cat.speed": "Velocidad",
+  "unit.day": "día",
+  "unit.week": "semana",
+  "unit.year": "año",
+  "unit.cup": "taza (US)",
+  "unit.gal": "galón (US)",
+  "unit.knot": "nudo",
+
+  "hist.title": "Historial",
+  "hist.empty": "Nada calculado todavía.",
+  "hist.clear": "borrar todo",
+  "hist.reuse": "Reusar este cálculo",
+
+  "settings.title": "Configuración",
+  "settings.theme": "Tema",
+  "settings.themeSystem": "Sistema",
+  "settings.themeLight": "Claro",
+  "settings.themeDark": "Oscuro",
+  "settings.language": "Idioma",
+  "settings.about":
+    " — calculadora 100% offline: estándar, científica (DEG/RAD, memoria), programador (HEX/DEC/OCT/BIN, bitwise, precisión arbitraria) y conversor de unidades. Motor de expresiones propio y testeado. Parte de la suite Local.",
+  "dlg.ok": "OK",
+};
+
+const DICTS: Record<Locale, Record<MessageKey, string>> = { pt, en, es };
+
+export function detectLocale(): Locale {
+  const l = (typeof navigator !== "undefined" ? navigator.language : "pt").toLowerCase();
+  if (l.startsWith("en")) return "en";
+  if (l.startsWith("es")) return "es";
+  return "pt";
+}
+
+function loadLocale(): Locale {
+  const v = typeof localStorage !== "undefined" ? localStorage.getItem(LOCALE_KEY) : null;
+  return v === "pt" || v === "en" || v === "es" ? v : detectLocale();
+}
+
+let current: Locale = loadLocale();
+const listeners = new Set<() => void>();
+
+export function getLocale(): Locale {
+  return current;
+}
+
+export function setLocale(locale: Locale) {
+  if (locale === current) return;
+  current = locale;
+  try {
+    localStorage.setItem(LOCALE_KEY, locale);
+  } catch {
+    /* localStorage indisponível */
+  }
+  for (const l of listeners) l();
+}
+
+function subscribe(l: () => void) {
+  listeners.add(l);
+  return () => listeners.delete(l);
+}
+
+export function useLocale(): Locale {
+  return useSyncExternalStore(subscribe, getLocale);
+}
+
+export function t(key: MessageKey, params?: Record<string, string | number>): string {
+  let msg: string = DICTS[current][key] ?? pt[key] ?? key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      msg = msg.split(`{${k}}`).join(String(v));
+    }
+  }
+  return msg;
+}
