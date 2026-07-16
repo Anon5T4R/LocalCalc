@@ -1,5 +1,6 @@
 import ConverterView from "./components/ConverterView";
 import Display from "./components/Display";
+import GraphView from "./components/GraphView";
 import HistoryPanel from "./components/HistoryPanel";
 import { ProgrammerPad, ScientificPad, StandardPad } from "./components/Keypad";
 import ProgrammerView from "./components/ProgrammerView";
@@ -18,6 +19,7 @@ export default function App() {
     { id: "standard", label: t("mode.standard") },
     { id: "scientific", label: t("mode.scientific") },
     { id: "programmer", label: t("mode.programmer") },
+    { id: "graph", label: t("mode.graph") },
     { id: "converter", label: t("mode.converter") },
   ];
 
@@ -47,6 +49,8 @@ export default function App() {
 
       {mode === "converter" ? (
         <ConverterView />
+      ) : mode === "graph" ? (
+        <GraphView />
       ) : (
         <>
           <Display />

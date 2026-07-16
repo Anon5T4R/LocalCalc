@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bigBases, evaluate, evaluateBig, formatResult } from "../engine";
+import { bigBases, evaluate, evaluateBig, formatResult, plotFunction } from "../engine";
 import { convert, convertTemp } from "../units";
 
 describe("evaluate — aritmética e precedência", () => {
@@ -53,6 +53,32 @@ describe("evaluate — aritmética e precedência", () => {
     expect(() => evaluate("foo(2)")).toThrow();
     expect(() => evaluate("2..5")).toThrow();
     expect(() => evaluate("0/0")).toThrow();
+  });
+});
+
+describe("variável ans", () => {
+  it("usa a última resposta na expressão", () => {
+    expect(evaluate("ans+1", "deg", { ans: 41 })).toBe(42);
+    expect(evaluate("ans*ans", "deg", { ans: 6 })).toBe(36);
+  });
+  it("ans desconhecida sem contexto dá erro", () => {
+    expect(() => evaluate("ans+1")).toThrow();
+  });
+});
+
+describe("plotFunction", () => {
+  it("amostra sin(x) em RAD com pontos válidos", () => {
+    const pts = plotFunction("sin(x)", -Math.PI, Math.PI, 5, "rad");
+    expect(pts).toHaveLength(5);
+    expect(pts[2].x).toBeCloseTo(0, 10);
+    expect(pts[2].y).toBeCloseTo(0, 10);
+    expect(pts.every((p) => p.y !== null)).toBe(true);
+  });
+  it("marca fora-do-domínio como null (1/x em x=0)", () => {
+    const pts = plotFunction("1/x", -2, 2, 5, "rad");
+    // x=0 é o ponto do meio → y infinito → null
+    expect(pts[2].y).toBeNull();
+    expect(pts[0].y).toBeCloseTo(-0.5, 10);
   });
 });
 

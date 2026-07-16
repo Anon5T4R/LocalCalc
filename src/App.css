@@ -300,6 +300,62 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- gráfico ---------- */
+.graph {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px;
+  gap: 10px;
+}
+.graph-controls {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.graph-controls .field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.graph-controls .field span {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.graph-controls .grow {
+  flex: 1;
+}
+.graph-controls .small input {
+  width: 70px;
+}
+.graph-canvas {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.graph-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.graph-error {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  color: var(--danger);
+  font-size: 12.5px;
+}
+.graph-yrange {
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+}
+
 /* ---------- histórico ---------- */
 .history-panel {
   position: fixed;

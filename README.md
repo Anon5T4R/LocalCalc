@@ -3,8 +3,15 @@
 Calculadora **100% offline** da suíte Local — "todo SO tem", agora a suíte
 também: padrão, científica, programador e conversor de unidades num app leve.
 
-## Recursos (v0.1)
+## Recursos
 
+**v0.2**
+- **Gráfico de função**: modo dedicado que plota `y = f(x)` (ex.: `sin(x)`,
+  `x^2`, `1/x`) num intervalo escolhido, com auto-range vertical e assíntotas
+  que quebram a linha (não liga através do infinito) — mesmo motor da conta
+- **`ans`**: a última resposta vira variável (`ans*2`, `sqrt(ans)`…)
+
+**v0.1**
 - **Padrão + Científica**: expressão livre (digite `2*(3+4)^2` direto),
   precedência correta, menos unário, `sin/cos/tan/asin/…` com **DEG/RAD**,
   `ln/log/log2`, `√`, potência, fatorial, `π`/`e`, memória (MC/MR/M+/M−)

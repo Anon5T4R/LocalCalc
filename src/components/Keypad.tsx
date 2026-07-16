@@ -72,7 +72,7 @@ const SCI_EXTRA: Key[][] = [
     { label: "acos", insert: "acos(", cls: "fn" },
     { label: "atan", insert: "atan(", cls: "fn" },
     { label: "x²", insert: "^2", cls: "fn" },
-    { label: "%", insert: "%", cls: "fn" },
+    { label: "ans", insert: "ans", cls: "fn" },
   ],
 ];
 

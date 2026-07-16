@@ -257,7 +257,11 @@ function fns(angle: AngleMode): Record<string, (...a: number[]) => number> {
   };
 }
 
-export function evaluate(expr: string, angle: AngleMode = "deg"): number {
+export function evaluate(
+  expr: string,
+  angle: AngleMode = "deg",
+  vars: Record<string, number> = {},
+): number {
   const rpn = toRpn(tokenize(expr, false));
   const st: number[] = [];
   const F = fns(angle);
@@ -266,7 +270,8 @@ export function evaluate(expr: string, angle: AngleMode = "deg"): number {
     else if (item.kind === "big") st.push(Number(item.value));
     else if (item.kind === "call") {
       if (item.argc === 0) {
-        const c = CONSTANTS[item.name];
+        // Variáveis do chamador (ans, x do gráfico…) têm precedência.
+        const c = vars[item.name] ?? CONSTANTS[item.name];
         if (c === undefined) throw new Error(`desconhecido: ${item.name}`);
         st.push(c);
       } else {
@@ -306,6 +311,81 @@ export function evaluate(expr: string, angle: AngleMode = "deg"): number {
   const r = st[0];
   if (Number.isNaN(r)) throw new Error("resultado indefinido");
   return r;
+}
+
+export interface PlotPoint {
+  x: number;
+  y: number | null; // null = fora do domínio (assíntota/NaN) — quebra a linha
+}
+
+/** Amostra `f(x)` num intervalo pro gráfico (x é uma variável na expressão). */
+export function plotFunction(
+  expr: string,
+  xMin: number,
+  xMax: number,
+  samples: number,
+  angle: AngleMode = "deg",
+): PlotPoint[] {
+  const rpn = toRpn(tokenize(expr, false)); // valida uma vez, não a cada ponto
+  const out: PlotPoint[] = [];
+  const step = (xMax - xMin) / (samples - 1);
+  const F = fns(angle);
+  for (let i = 0; i < samples; i++) {
+    const x = xMin + i * step;
+    let y: number | null;
+    try {
+      y = evalRpn(rpn, F, { x });
+      if (!Number.isFinite(y)) y = null;
+    } catch {
+      y = null;
+    }
+    out.push({ x, y });
+  }
+  return out;
+}
+
+/** Avalia um RPN já tokenizado (usado no plot pra não re-tokenizar por ponto). */
+function evalRpn(
+  rpn: RpnItem[],
+  F: Record<string, (...a: number[]) => number>,
+  vars: Record<string, number>,
+): number {
+  const st: number[] = [];
+  for (const item of rpn) {
+    if (item.kind === "num") st.push(item.value);
+    else if (item.kind === "big") st.push(Number(item.value));
+    else if (item.kind === "call") {
+      if (item.argc === 0) {
+        const c = vars[item.name] ?? CONSTANTS[item.name];
+        if (c === undefined) throw new Error(`desconhecido: ${item.name}`);
+        st.push(c);
+      } else {
+        const f = F[item.name];
+        if (!f) throw new Error(`função desconhecida: ${item.name}`);
+        if (st.length < item.argc) throw new Error("incompleta");
+        st.push(f(...st.splice(st.length - item.argc, item.argc)));
+      }
+    } else if (item.kind === "op") {
+      if (item.op === "u-") st.push(-st.pop()!);
+      else if (item.op === "!") st.push(factorial(st.pop()!));
+      else {
+        const b = st.pop()!;
+        const a = st.pop()!;
+        switch (item.op) {
+          case "+": st.push(a + b); break;
+          case "-": st.push(a - b); break;
+          case "*": st.push(a * b); break;
+          case "/": st.push(a / b); break;
+          case "%":
+          case "mod": st.push(a % b); break;
+          case "^": st.push(Math.pow(a, b)); break;
+          default: throw new Error("op inválido");
+        }
+      }
+    }
+  }
+  if (st.length !== 1) throw new Error("incompleta");
+  return st[0];
 }
 
 /** Formata pra exibição: 12 dígitos significativos, sem ruído binário. */

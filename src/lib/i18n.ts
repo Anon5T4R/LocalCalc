@@ -21,7 +21,14 @@ const pt = {
   "mode.standard": "Padrão",
   "mode.scientific": "Científica",
   "mode.programmer": "Programador",
+  "mode.graph": "Gráfico",
   "mode.converter": "Conversor",
+
+  // Gráfico
+  "graph.fx": "f(x) =",
+  "graph.xmin": "x mín.",
+  "graph.xmax": "x máx.",
+  "graph.noPoints": "Nada pra plotar nesse intervalo.",
 
   // Topo
   "top.history": "Histórico",
@@ -84,7 +91,13 @@ const en: Record<MessageKey, string> = {
   "mode.standard": "Standard",
   "mode.scientific": "Scientific",
   "mode.programmer": "Programmer",
+  "mode.graph": "Graph",
   "mode.converter": "Converter",
+
+  "graph.fx": "f(x) =",
+  "graph.xmin": "x min",
+  "graph.xmax": "x max",
+  "graph.noPoints": "Nothing to plot in this range.",
 
   "top.history": "History",
   "top.settingsTitle": "Settings",
@@ -138,7 +151,13 @@ const es: Record<MessageKey, string> = {
   "mode.standard": "Estándar",
   "mode.scientific": "Científica",
   "mode.programmer": "Programador",
+  "mode.graph": "Gráfico",
   "mode.converter": "Conversor",
+
+  "graph.fx": "f(x) =",
+  "graph.xmin": "x mín.",
+  "graph.xmax": "x máx.",
+  "graph.noPoints": "Nada que graficar en este intervalo.",
 
   "top.history": "Historial",
   "top.settingsTitle": "Configuración",

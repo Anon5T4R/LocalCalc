@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { evaluate, evaluateBig, formatResult, type AngleMode } from "../lib/engine";
 
-export type Mode = "standard" | "scientific" | "programmer" | "converter";
+export type Mode = "standard" | "scientific" | "programmer" | "converter" | "graph";
 
 export interface HistoryItem {
   expr: string;
@@ -36,6 +36,8 @@ interface CalcState {
   error: string | null;
   angle: AngleMode;
   memory: number;
+  /** Última resposta confirmada (usável como `ans` na expressão). */
+  ans: number;
   history: HistoryItem[];
   historyOpen: boolean;
 
@@ -54,11 +56,11 @@ interface CalcState {
   useHistory: (item: HistoryItem) => void;
 }
 
-function computePreview(expr: string, mode: Mode, angle: AngleMode): string | null {
-  if (!expr.trim()) return null;
+function computePreview(expr: string, mode: Mode, angle: AngleMode, ans: number): string | null {
+  if (!expr.trim() || mode === "graph") return null;
   try {
     if (mode === "programmer") return evaluateBig(expr).toString(10);
-    return formatResult(evaluate(expr, angle));
+    return formatResult(evaluate(expr, angle, { ans }));
   } catch {
     return null;
   }
@@ -72,18 +74,19 @@ export const useCalc = create<CalcState>((set, get) => ({
   error: null,
   angle: localStorage.getItem(ANGLE_KEY) === "rad" ? "rad" : "deg",
   memory: 0,
+  ans: 0,
   history: loadHistory(),
   historyOpen: false,
 
   setMode: (mode) => {
     localStorage.setItem(MODE_KEY, mode);
     const s = get();
-    set({ mode, error: null, result: null, preview: computePreview(s.expr, mode, s.angle) });
+    set({ mode, error: null, result: null, preview: computePreview(s.expr, mode, s.angle, s.ans) });
   },
 
   setExpr: (expr) => {
     const s = get();
-    set({ expr, error: null, result: null, preview: computePreview(expr, s.mode, s.angle) });
+    set({ expr, error: null, result: null, preview: computePreview(expr, s.mode, s.angle, s.ans) });
   },
 
   insert: (text) => {
@@ -100,17 +103,22 @@ export const useCalc = create<CalcState>((set, get) => ({
     const s = get();
     if (!s.expr.trim()) return;
     try {
-      const result =
-        s.mode === "programmer"
-          ? evaluateBig(s.expr).toString(10)
-          : formatResult(evaluate(s.expr, s.angle));
+      let ansNum = s.ans;
+      let result: string;
+      if (s.mode === "programmer") {
+        result = evaluateBig(s.expr).toString(10);
+      } else {
+        ansNum = evaluate(s.expr, s.angle, { ans: s.ans });
+        result = formatResult(ansNum);
+      }
       const history = [
         { expr: s.expr, result, mode: s.mode },
         ...s.history.filter((h) => h.expr !== s.expr || h.result !== result),
       ].slice(0, 100);
       localStorage.setItem(HIST_KEY, JSON.stringify(history));
-      // O resultado vira a nova expressão (continua a conta em cima dele).
-      set({ result, expr: result, preview: null, error: null, history });
+      // O resultado vira a nova expressão (continua a conta em cima dele) e
+      // fica disponível como `ans`.
+      set({ result, expr: result, preview: null, error: null, history, ans: ansNum });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : String(e), result: null });
     }
@@ -119,7 +127,7 @@ export const useCalc = create<CalcState>((set, get) => ({
   setAngle: (angle) => {
     localStorage.setItem(ANGLE_KEY, angle);
     const s = get();
-    set({ angle, preview: computePreview(s.expr, s.mode, angle) });
+    set({ angle, preview: computePreview(s.expr, s.mode, angle, s.ans) });
   },
 
   memAdd: (sign) => {
