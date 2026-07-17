@@ -95,7 +95,14 @@ function tokenize(src: string, programmer: boolean): Tok[] {
       i += 2;
       continue;
     }
-    if ("+-*/^%!&|~".includes(c)) {
+    if (c === "%") {
+      // Científica/padrão: `%` é porcentagem pós-fixa (200+10% = 220).
+      // Programador: `%` continua sendo módulo (`mod` também existe lá).
+      out.push({ kind: "op", op: programmer ? "%" : "pct" });
+      i++;
+      continue;
+    }
+    if ("+-*/^!&|~".includes(c)) {
       // & | ~ são atalhos do modo programador
       const map: Record<string, string> = { "&": "and", "|": "or", "~": "not" };
       out.push({ kind: "op", op: map[c] ?? c });
@@ -161,9 +168,9 @@ function toRpn(toks: Tok[]): RpnItem[] {
       ) {
         op = "u-";
       }
-      if (op === "!") {
-        // pós-fixo: aplica direto
-        out.push({ kind: "op", op: "!" });
+      if (op === "!" || op === "pct") {
+        // pós-fixos: aplicam direto ao operando anterior
+        out.push({ kind: "op", op });
         prev = tok;
         continue;
       }
@@ -257,58 +264,92 @@ function fns(angle: AngleMode): Record<string, (...a: number[]) => number> {
   };
 }
 
-export function evaluate(
-  expr: string,
-  angle: AngleMode = "deg",
-  vars: Record<string, number> = {},
+/**
+ * Núcleo de avaliação de um RPN já tokenizado. Usado pela `evaluate` e pelo
+ * plot (que reaproveita o mesmo RPN por ponto, sem re-tokenizar).
+ *
+ * Porcentagem pós-fixa (`pct`): uma pilha booleana paralela marca quais valores
+ * são "porcentagem". A resolução depende do operador que os consome —
+ *   a + b%  → a + a·b/100      a * b%  → a · b/100
+ *   a - b%  → a − a·b/100      a / b%  → a / (b/100)
+ * — e uma porcentagem "solta" (sem operador aditivo/multiplicativo, ou como
+ * argumento de função, ou resultado final) vira simplesmente b/100.
+ */
+function evalCore(
+  rpn: RpnItem[],
+  F: Record<string, (...a: number[]) => number>,
+  vars: Record<string, number>,
 ): number {
-  const rpn = toRpn(tokenize(expr, false));
   const st: number[] = [];
-  const F = fns(angle);
+  const pf: boolean[] = []; // pf[i] = st[i] é porcentagem
+  const push = (v: number, pct = false) => {
+    st.push(v);
+    pf.push(pct);
+  };
+  const pop = (): [number, boolean] => {
+    if (st.length < 1) throw new Error("expressão incompleta");
+    return [st.pop()!, pf.pop()!];
+  };
+  const val = ([v, p]: [number, boolean]) => (p ? v / 100 : v);
+
   for (const item of rpn) {
-    if (item.kind === "num") st.push(item.value);
-    else if (item.kind === "big") st.push(Number(item.value));
+    if (item.kind === "num") push(item.value);
+    else if (item.kind === "big") push(Number(item.value));
     else if (item.kind === "call") {
       if (item.argc === 0) {
         // Variáveis do chamador (ans, x do gráfico…) têm precedência.
         const c = vars[item.name] ?? CONSTANTS[item.name];
         if (c === undefined) throw new Error(`desconhecido: ${item.name}`);
-        st.push(c);
+        push(c);
       } else {
         const f = F[item.name];
         if (!f) throw new Error(`função desconhecida: ${item.name}`);
         if (st.length < item.argc) throw new Error("expressão incompleta");
-        const args = st.splice(st.length - item.argc, item.argc);
-        st.push(f(...args));
+        const args: number[] = [];
+        for (let k = 0; k < item.argc; k++) args.unshift(val(pop()));
+        push(f(...args));
       }
     } else if (item.kind === "op") {
       if (item.op === "u-") {
-        if (st.length < 1) throw new Error("expressão incompleta");
-        st.push(-st.pop()!);
+        const [v, p] = pop();
+        push(-v, p);
       } else if (item.op === "!") {
-        if (st.length < 1) throw new Error("expressão incompleta");
-        st.push(factorial(st.pop()!));
+        push(factorial(val(pop())));
+      } else if (item.op === "pct") {
+        // marca o topo como porcentagem (resolvida por quem consumir)
+        if (pf.length < 1) throw new Error("expressão incompleta");
+        pf[pf.length - 1] = true;
       } else {
-        if (st.length < 2) throw new Error("expressão incompleta");
-        const b = st.pop()!;
-        const a = st.pop()!;
+        const [b, pb] = pop();
+        let [a, pa] = pop();
+        if (pa) a = a / 100; // porcentagem à esquerda vira valor solto
+        let r: number;
         switch (item.op) {
-          case "+": st.push(a + b); break;
-          case "-": st.push(a - b); break;
-          case "*": st.push(a * b); break;
-          case "/": st.push(a / b); break;
+          case "+": r = a + (pb ? (a * b) / 100 : b); break;
+          case "-": r = a - (pb ? (a * b) / 100 : b); break;
+          case "*": r = a * (pb ? b / 100 : b); break;
+          case "/": r = a / (pb ? b / 100 : b); break;
+          case "^": r = Math.pow(a, pb ? b / 100 : b); break;
           case "%":
-          case "mod": st.push(a % b); break;
-          case "^": st.push(Math.pow(a, b)); break;
+          case "mod": r = a % (pb ? b / 100 : b); break;
           default: throw new Error(`operador inválido aqui: ${item.op}`);
         }
+        push(r);
       }
     } else {
       throw new Error("expressão inválida");
     }
   }
   if (st.length !== 1) throw new Error("expressão incompleta");
-  const r = st[0];
+  return val([st[0], pf[0]]);
+}
+
+export function evaluate(
+  expr: string,
+  angle: AngleMode = "deg",
+  vars: Record<string, number> = {},
+): number {
+  const r = evalCore(toRpn(tokenize(expr, false)), fns(angle), vars);
   if (Number.isNaN(r)) throw new Error("resultado indefinido");
   return r;
 }
@@ -334,7 +375,7 @@ export function plotFunction(
     const x = xMin + i * step;
     let y: number | null;
     try {
-      y = evalRpn(rpn, F, { x });
+      y = evalCore(rpn, F, { x });
       if (!Number.isFinite(y)) y = null;
     } catch {
       y = null;
@@ -342,50 +383,6 @@ export function plotFunction(
     out.push({ x, y });
   }
   return out;
-}
-
-/** Avalia um RPN já tokenizado (usado no plot pra não re-tokenizar por ponto). */
-function evalRpn(
-  rpn: RpnItem[],
-  F: Record<string, (...a: number[]) => number>,
-  vars: Record<string, number>,
-): number {
-  const st: number[] = [];
-  for (const item of rpn) {
-    if (item.kind === "num") st.push(item.value);
-    else if (item.kind === "big") st.push(Number(item.value));
-    else if (item.kind === "call") {
-      if (item.argc === 0) {
-        const c = vars[item.name] ?? CONSTANTS[item.name];
-        if (c === undefined) throw new Error(`desconhecido: ${item.name}`);
-        st.push(c);
-      } else {
-        const f = F[item.name];
-        if (!f) throw new Error(`função desconhecida: ${item.name}`);
-        if (st.length < item.argc) throw new Error("incompleta");
-        st.push(f(...st.splice(st.length - item.argc, item.argc)));
-      }
-    } else if (item.kind === "op") {
-      if (item.op === "u-") st.push(-st.pop()!);
-      else if (item.op === "!") st.push(factorial(st.pop()!));
-      else {
-        const b = st.pop()!;
-        const a = st.pop()!;
-        switch (item.op) {
-          case "+": st.push(a + b); break;
-          case "-": st.push(a - b); break;
-          case "*": st.push(a * b); break;
-          case "/": st.push(a / b); break;
-          case "%":
-          case "mod": st.push(a % b); break;
-          case "^": st.push(Math.pow(a, b)); break;
-          default: throw new Error("op inválido");
-        }
-      }
-    }
-  }
-  if (st.length !== 1) throw new Error("incompleta");
-  return st[0];
 }
 
 /** Formata pra exibição: 12 dígitos significativos, sem ruído binário. */

@@ -9,7 +9,6 @@ describe("evaluate — aritmética e precedência", () => {
     expect(evaluate("10/4")).toBe(2.5);
     expect(evaluate("2^10")).toBe(1024);
     expect(evaluate("2^3^2")).toBe(512); // direita-associativo
-    expect(evaluate("10%3")).toBe(1);
   });
 
   it("menos unário", () => {
@@ -53,6 +52,26 @@ describe("evaluate — aritmética e precedência", () => {
     expect(() => evaluate("foo(2)")).toThrow();
     expect(() => evaluate("2..5")).toThrow();
     expect(() => evaluate("0/0")).toThrow();
+  });
+});
+
+describe("porcentagem (científica)", () => {
+  it("% solto é dividir por 100", () => {
+    expect(evaluate("50%")).toBe(0.5);
+    expect(evaluate("10%")).toBe(0.1);
+    expect(evaluate("sqrt(25%)")).toBeCloseTo(0.5, 12); // 25% = 0.25
+  });
+  it("aditivo: percentual sobre a base (imposto/desconto)", () => {
+    expect(evaluate("200+10%")).toBe(220);
+    expect(evaluate("200-10%")).toBe(180);
+    expect(evaluate("50+50%")).toBe(75);
+  });
+  it("multiplicativo: fração da base (gorjeta)", () => {
+    expect(evaluate("200*15%")).toBeCloseTo(30, 12);
+    expect(evaluate("1000/25%")).toBe(4000); // 1000 / 0.25
+  });
+  it("precedência com a base composta à esquerda", () => {
+    expect(evaluate("2*100+10%")).toBe(220); // base = 200
   });
 });
 
