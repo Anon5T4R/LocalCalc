@@ -32,7 +32,16 @@ const pt = {
 
   // Topo
   "top.history": "Histórico",
+  "top.vars": "Variáveis",
   "top.settingsTitle": "Configurações",
+
+  // Variáveis
+  "vars.title": "Variáveis",
+  "vars.empty": "Nenhuma variável definida ainda.",
+  "vars.clear": "limpar tudo",
+  "vars.reuse": "Inserir o nome na expressão",
+  "vars.remove": "Apagar {name}",
+  "vars.hint": "Defina com nome = expressão (ex.: x = 12) e use o nome nas contas seguintes.",
 
   // Display / ações
   "display.placeholder": "Digite a expressão…",
@@ -105,7 +114,15 @@ const en: Record<MessageKey, string> = {
   "graph.noPoints": "Nothing to plot in this range.",
 
   "top.history": "History",
+  "top.vars": "Variables",
   "top.settingsTitle": "Settings",
+
+  "vars.title": "Variables",
+  "vars.empty": "No variables defined yet.",
+  "vars.clear": "clear all",
+  "vars.reuse": "Insert the name into the expression",
+  "vars.remove": "Delete {name}",
+  "vars.hint": "Define with name = expression (e.g. x = 12) and use the name in later calculations.",
 
   "display.placeholder": "Type an expression…",
   "display.error": "Error: {msg}",
@@ -170,7 +187,15 @@ const es: Record<MessageKey, string> = {
   "graph.noPoints": "Nada que graficar en este intervalo.",
 
   "top.history": "Historial",
+  "top.vars": "Variables",
   "top.settingsTitle": "Configuración",
+
+  "vars.title": "Variables",
+  "vars.empty": "Ninguna variable definida todavía.",
+  "vars.clear": "borrar todo",
+  "vars.reuse": "Insertar el nombre en la expresión",
+  "vars.remove": "Borrar {name}",
+  "vars.hint": "Define con nombre = expresión (ej.: x = 12) y usa el nombre en los cálculos siguientes.",
 
   "display.placeholder": "Escribe una expresión…",
   "display.error": "Error: {msg}",

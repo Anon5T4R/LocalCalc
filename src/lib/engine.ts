@@ -366,6 +366,7 @@ export function plotFunction(
   xMax: number,
   samples: number,
   angle: AngleMode = "deg",
+  vars: Record<string, number> = {},
 ): PlotPoint[] {
   const rpn = toRpn(tokenize(expr, false)); // valida uma vez, não a cada ponto
   const out: PlotPoint[] = [];
@@ -375,7 +376,11 @@ export function plotFunction(
     const x = xMin + i * step;
     let y: number | null;
     try {
-      y = evalCore(rpn, F, { x });
+      // O `x` do eixo entra DEPOIS das variáveis do usuário e as sombra de
+      // propósito: quem definiu `x = 12` no painel e plota `sin(x)` quer a
+      // curva, não a reta constante sin(12). Fora do gráfico o `x` do painel
+      // continua valendo normalmente.
+      y = evalCore(rpn, F, { ...vars, x });
       if (!Number.isFinite(y)) y = null;
     } catch {
       y = null;
@@ -392,6 +397,97 @@ export function formatResult(value: number): string {
   const s = value.toPrecision(12);
   // tira zeros à direita ("0.500000000000" → "0.5")
   return String(Number(s));
+}
+
+// ---------- variáveis do usuário ----------
+
+/**
+ * Nomes que o parser já ocupa e que NÃO podem virar variável: as constantes
+ * (`pi`/`e`), toda função científica, os operadores-palavra do modo programador
+ * (`and`, `shl`…) e o `ans`.
+ *
+ * O motivo é `evalCore`: lá `vars[name]` é consultado ANTES de `CONSTANTS[name]`
+ * (a precedência que faz `ans` e o `x` do gráfico funcionarem). Logo uma
+ * variável chamada `pi` sequestraria π em TODA conta seguinte, calada. Recusar
+ * na atribuição, com erro nomeando o conflito, é a única saída honesta —
+ * silêncio aqui vira resultado errado com cara de certo.
+ */
+export const RESERVED_NAMES: ReadonlySet<string> = new Set([
+  ...Object.keys(CONSTANTS),
+  ...Object.keys(fns("rad")), // o modo de ângulo troca o corpo das fns, não os nomes
+  ...WORD_OPS,
+  "ans",
+]);
+
+/**
+ * Forma válida de nome. É deliberadamente a MESMA regra do tokenizer
+ * (`[a-zA-Z][a-zA-Z0-9]*`, sem `_` e sem acento) porque ele é quem vai reler o
+ * nome na expressão seguinte: aceitar `taxa_iva` ou `preço` criaria variável
+ * fantasma — listada no painel e "desconhecida" na hora de usar.
+ */
+const VAR_NAME_RE = /^[a-zA-Z][a-zA-Z0-9]*$/;
+
+/**
+ * Normaliza e valida um nome de variável, ou lança com o motivo exato.
+ * O lowercase não é cosmético: o tokenizer minúscula todo ident que lê, então
+ * `Total` e `total` são forçosamente a mesma variável — melhor colapsar aqui do
+ * que deixar o painel mostrar duas linhas que apontam pro mesmo valor.
+ */
+export function checkVarName(raw: string): string {
+  const name = raw.trim().toLowerCase();
+  if (!VAR_NAME_RE.test(name)) {
+    throw new Error(`nome inválido: "${raw.trim()}" — use letra seguida de letras/números`);
+  }
+  if (RESERVED_NAMES.has(name)) {
+    throw new Error(`nome reservado pelo parser: ${name}`);
+  }
+  return name;
+}
+
+export interface Assignment {
+  name: string;
+  expr: string;
+}
+
+/**
+ * Reconhece `nome = expressão` antes de qualquer tokenização.
+ *
+ * Tem que ser antes porque `=` não é operador do motor — chegando no tokenizer
+ * ele vira "caractere inválido". Só o PRIMEIRO `=` separa: `x = y = 2` não é
+ * encadeamento, é `x` recebendo a expressão inválida `y = 2` (erro, não
+ * silêncio). Devolve null quando não há atribuição e o chamador segue com a
+ * expressão crua.
+ */
+export function parseAssignment(src: string): Assignment | null {
+  const m = /^\s*([^\s=]+)\s*=\s*(.*)$/.exec(src);
+  return m ? { name: m[1], expr: m[2] } : null;
+}
+
+export interface AssignResult {
+  name: string;
+  value: number;
+}
+
+/**
+ * Avalia `nome = expr` e devolve o par pronto pro ambiente.
+ *
+ * A avaliação é ANSIOSA — o ambiente guarda NÚMERO, nunca expressão — e é
+ * exatamente isso que torna ciclo e recursão estruturalmente impossíveis, sem
+ * precisar de detecção de ciclo em grafo: `x = x + 1` lê o x ANTIGO (número já
+ * resolvido) e grava outro número; sem x anterior é o erro normal
+ * "desconhecido: x". Guardar a expressão daria `a = b` / `b = a` travando a
+ * avaliação — complexidade que uma calculadora não paga.
+ *
+ * Ordem importa: o nome é validado ANTES de avaliar, senão `pi = 1/0` gastaria a
+ * conta pra só depois recusar o nome.
+ */
+export function evaluateAssignment(
+  a: Assignment,
+  angle: AngleMode = "deg",
+  vars: Record<string, number> = {},
+): AssignResult {
+  const name = checkVarName(a.name);
+  return { name, value: evaluate(a.expr, angle, vars) };
 }
 
 // ---------- avaliação programador (BigInt) ----------

@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { bigBases, evaluate, evaluateBig, formatResult, plotFunction } from "../engine";
+import {
+  bigBases,
+  checkVarName,
+  evaluate,
+  evaluateAssignment,
+  evaluateBig,
+  formatResult,
+  parseAssignment,
+  plotFunction,
+  RESERVED_NAMES,
+} from "../engine";
 import { convert, convertTemp } from "../units";
 
 describe("evaluate — aritmética e precedência", () => {
@@ -85,6 +95,103 @@ describe("variável ans", () => {
   });
 });
 
+describe("variáveis do usuário — parseAssignment", () => {
+  it("reconhece `nome = expressão`", () => {
+    expect(parseAssignment("x = 12")).toEqual({ name: "x", expr: "12" });
+    expect(parseAssignment("taxa=0.15")).toEqual({ name: "taxa", expr: "0.15" });
+    expect(parseAssignment("  total  =  2 + 3 * 4 ")).toEqual({
+      name: "total",
+      expr: "2 + 3 * 4 ",
+    });
+  });
+
+  it("expressão comum NÃO é atribuição", () => {
+    expect(parseAssignment("2+2")).toBeNull();
+    expect(parseAssignment("sin(90)")).toBeNull();
+    expect(parseAssignment("2 + 2 = 4")).toBeNull(); // "2" não é seguido de `=`
+    expect(parseAssignment("")).toBeNull();
+  });
+
+  it("só o PRIMEIRO `=` separa (sem encadeamento silencioso)", () => {
+    expect(parseAssignment("x = y = 2")).toEqual({ name: "x", expr: "y = 2" });
+    // e o lado direito `y = 2` é expressão inválida, não uma segunda atribuição
+    expect(() => evaluate("y = 2")).toThrow();
+  });
+});
+
+describe("variáveis do usuário — nomes reservados", () => {
+  it("recusa constantes e funções que o parser já usa", () => {
+    for (const name of ["pi", "e", "sin", "cos", "sqrt", "log", "max", "abs", "ans"]) {
+      expect(() => checkVarName(name)).toThrow(/reservado/);
+    }
+  });
+
+  it("o conjunto reservado cobre constantes, funções, ops-palavra e ans", () => {
+    expect(RESERVED_NAMES.has("pi")).toBe(true);
+    expect(RESERVED_NAMES.has("atan")).toBe(true);
+    expect(RESERVED_NAMES.has("shl")).toBe(true); // operador-palavra do programador
+    expect(RESERVED_NAMES.has("ans")).toBe(true);
+    expect(RESERVED_NAMES.has("x")).toBe(false); // `x` é do usuário (o gráfico o sombreia)
+  });
+
+  it("recusa formas que o tokenizer não conseguiria reler", () => {
+    expect(() => checkVarName("2x")).toThrow(/inválido/); // começa com dígito
+    expect(() => checkVarName("taxa_iva")).toThrow(/inválido/); // `_` não é ident
+    expect(() => checkVarName("preço")).toThrow(/inválido/); // acento não é ident
+    expect(() => checkVarName("")).toThrow(/inválido/);
+  });
+
+  it("normaliza pra minúsculo (o tokenizer minúscula todo ident)", () => {
+    expect(checkVarName("Total")).toBe("total");
+    expect(checkVarName("  Sub2  ")).toBe("sub2");
+    expect(() => checkVarName("PI")).toThrow(/reservado/); // reservado é case-insensitive
+  });
+});
+
+describe("variáveis do usuário — avaliação", () => {
+  it("define e reusa nas expressões seguintes", () => {
+    const { name, value } = evaluateAssignment({ name: "x", expr: "12" });
+    expect(name).toBe("x");
+    expect(value).toBe(12);
+    expect(evaluate("x * 3", "deg", { x: 12 })).toBe(36);
+  });
+
+  it("a definição enxerga as variáveis já existentes", () => {
+    const r = evaluateAssignment({ name: "dobro", expr: "x * 2" }, "deg", { x: 21 });
+    expect(r).toEqual({ name: "dobro", value: 42 });
+  });
+
+  it("nome é validado ANTES de avaliar (não gasta a conta pra depois recusar)", () => {
+    expect(() => evaluateAssignment({ name: "pi", expr: "1/0" })).toThrow(/reservado/);
+  });
+
+  it("`x = x + 1` usa o x ANTIGO — avaliação ansiosa mata recursão e ciclo", () => {
+    // Sem detecção de grafo: o ambiente guarda NÚMERO, então a auto-referência
+    // é só uma leitura do valor anterior.
+    expect(evaluateAssignment({ name: "x", expr: "x + 1" }, "deg", { x: 12 }).value).toBe(13);
+    // E sem valor anterior é o erro normal de identificador desconhecido.
+    expect(() => evaluateAssignment({ name: "x", expr: "x + 1" })).toThrow(/desconhecido/);
+  });
+
+  it("ciclo a→b→a é impossível: b congelou o número, não a expressão", () => {
+    const a = evaluateAssignment({ name: "a", expr: "10" }).value;
+    const b = evaluateAssignment({ name: "b", expr: "a * 2" }, "deg", { a }).value;
+    expect(b).toBe(20);
+    // redefinir `a` apontando pra `b` termina — `b` já é 20, não "a*2"
+    const a2 = evaluateAssignment({ name: "a", expr: "b + 1" }, "deg", { a, b }).value;
+    expect(a2).toBe(21);
+  });
+
+  it("variável convive com constantes e funções na mesma expressão", () => {
+    expect(evaluate("sin(ang)", "deg", { ang: 90 })).toBeCloseTo(1, 12);
+    expect(evaluate("raio^2*pi", "deg", { raio: 2 })).toBeCloseTo(4 * Math.PI, 12);
+  });
+
+  it("variável desconhecida dá erro claro, não zero silencioso", () => {
+    expect(() => evaluate("naoexiste + 1")).toThrow(/desconhecido/);
+  });
+});
+
 describe("plotFunction", () => {
   it("amostra sin(x) em RAD com pontos válidos", () => {
     const pts = plotFunction("sin(x)", -Math.PI, Math.PI, 5, "rad");
@@ -98,6 +205,16 @@ describe("plotFunction", () => {
     // x=0 é o ponto do meio → y infinito → null
     expect(pts[2].y).toBeNull();
     expect(pts[0].y).toBeCloseTo(-0.5, 10);
+  });
+
+  it("variáveis do usuário viram parâmetros da curva", () => {
+    const pts = plotFunction("a*x", -2, 2, 5, "rad", { a: 3 });
+    expect(pts[4].y).toBeCloseTo(6, 10); // a=3 em x=2
+  });
+
+  it("o `x` do eixo SOMBREIA um `x` do usuário (senão a curva viraria reta)", () => {
+    const pts = plotFunction("x", -2, 2, 5, "rad", { x: 99 });
+    expect(pts.map((p) => p.y)).toEqual([-2, -1, 0, 1, 2]);
   });
 });
 

@@ -518,6 +518,54 @@ select {
   font-weight: 600;
 }
 
+/* ---------- variáveis (reusa a casca .history-panel/.history-inner) ---------- */
+.var-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+.var-item {
+  flex: 1;
+  min-width: 0; /* sem isso o flex ignora o ellipsis do .var-name */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+}
+.var-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.var-value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.var-remove {
+  padding: 0 10px;
+  color: var(--danger);
+  border: none;
+  background: transparent;
+  font-size: 13px;
+}
+.var-hint {
+  font-size: 12px;
+  line-height: 1.45;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.var-badge {
+  /* Colado no 𝑥 do topo; `sup` real desalinharia a altura do botão. */
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: super;
+  margin-left: 1px;
+}
+
 /* ---------- modal ---------- */
 .modal-backdrop {
   position: fixed;

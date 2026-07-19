@@ -23,6 +23,7 @@ function formatAxis(v: number): string {
 /** Modo gráfico: plota y = f(x) no intervalo, com auto-range vertical. */
 export default function GraphView() {
   const angle = useCalc((s) => s.angle);
+  const vars = useCalc((s) => s.vars);
   const [expr, setExpr] = useState("sin(x)");
   const [xMin, setXMin] = useState(-10);
   const [xMax, setXMax] = useState(10);
@@ -35,7 +36,9 @@ export default function GraphView() {
     }
     try {
       // No modo gráfico o ângulo é sempre RAD (convenção de f(x) matemática).
-      const pts = plotFunction(expr, xMin, xMax, SAMPLES, "rad");
+      // As variáveis do painel entram como parâmetros da curva (`a*sin(x)` com
+      // `a = 3` plota) — menos o `x`, que `plotFunction` sombreia com o eixo.
+      const pts = plotFunction(expr, xMin, xMax, SAMPLES, "rad", vars);
       const ys = pts.filter((p) => p.y !== null).map((p) => p.y!);
       if (ys.length === 0) return { path: "", yMin: -1, yMax: 1, error: t("graph.noPoints") };
       let lo = Math.min(...ys);
@@ -65,7 +68,7 @@ export default function GraphView() {
       return { path: "", yMin: -1, yMax: 1, error: String(e) };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expr, xMin, xMax, angle]);
+  }, [expr, xMin, xMax, angle, vars]);
 
   const axisX = xMin < 0 && xMax > 0 ? ((0 - xMin) / (xMax - xMin)) * W : null;
   const axisY = yMin < 0 && yMax > 0 ? H - ((0 - yMin) / (yMax - yMin)) * H : null;

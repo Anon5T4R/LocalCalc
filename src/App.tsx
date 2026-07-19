@@ -6,13 +6,15 @@ import { ProgrammerPad, ScientificPad, StandardPad } from "./components/Keypad";
 import ProgrammerView from "./components/ProgrammerView";
 import SettingsModal from "./components/SettingsModal";
 import Toasts from "./components/Toasts";
+import VarsPanel from "./components/VarsPanel";
 import { t } from "./lib/i18n";
 import { useCalc, type Mode } from "./state/store";
 import { useUi } from "./state/ui";
 
 export default function App() {
   const mode = useCalc((s) => s.mode);
-  const { setMode, toggleHistory } = useCalc.getState();
+  const varCount = useCalc((s) => Object.keys(s.vars).length);
+  const { setMode, toggleHistory, toggleVars } = useCalc.getState();
   const setSettingsOpen = useUi((s) => s.setSettingsOpen);
 
   const modes: { id: Mode; label: string }[] = [
@@ -38,6 +40,11 @@ export default function App() {
           ))}
         </div>
         <div className="topbar-actions">
+          {/* O contador é o que impede a persistência de virar lixo esquecido:
+              sem ele, variáveis de uma sessão antiga ficariam invisíveis. */}
+          <button title={t("top.vars")} onClick={toggleVars}>
+            𝑥{varCount > 0 && <span className="var-badge">{varCount}</span>}
+          </button>
           <button title={t("top.history")} onClick={toggleHistory}>
             🕘
           </button>
@@ -64,6 +71,7 @@ export default function App() {
       )}
 
       <HistoryPanel />
+      <VarsPanel />
       <SettingsModal />
       <Toasts />
     </div>
